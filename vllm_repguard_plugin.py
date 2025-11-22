@@ -1,20 +1,3 @@
-"""
-vllm_repguard_plugin
---------------------
-
-General plugin for vLLM that installs a low‑overhead repetition guard.
-It tracks token IDs (not strings) per request and aborts requests that
-enter a tight repetition loop.
-
-Usage (after packaging below):
-
-    VLLM_REPGUARD_ENABLE=1 vllm serve --model <your-model> ...
-
-Register this module as a `vllm.general_plugins` entry point:
-
-    "repguard = vllm_repguard_plugin:register_repguard"
-"""
-
 from __future__ import annotations
 
 import logging
@@ -23,18 +6,26 @@ from typing import List, Optional, Any
 
 log = logging.getLogger(__name__)
 
+import os
+
+def validate_buffer_size(value):
+    ivalue = int(value)
+    if not (ivalue > 0 and (ivalue & (ivalue - 1) == 0)):
+        raise ValueError("BUFFER_SIZE must be a power of 2 and greater than 0.")
+    return ivalue
+
 class RepetitionGuard:
     """
     Detects when generation gets stuck in a short repeating loop.
     This is intentionally hyper‑simple and allocation‑free in the hot path.
     """
 
-    BUFFER_SIZE = 1024          # must be power of 2
+    BUFFER_SIZE = validate_buffer_size(os.getenv("BUFFER_SIZE", "1024")) # must be a power of 2
     MASK = BUFFER_SIZE - 1
-    MAX_TOKEN_REP = 32
-    MIN_GRAM_REP = 5
-    MAX_NGRAM_LEN = 12
-    MIN_NGRAM_LEN = 3
+    MAX_TOKEN_REP = int(os.getenv("MAX_TOKEN_REP", "32"))
+    MIN_GRAM_REP = int(os.getenv("MIN_GRAM_REP", "5"))
+    MAX_NGRAM_LEN = int(os.getenv("MAX_NGRAM_LEN", "12"))
+    MIN_NGRAM_LEN = int(os.getenv("MIN_NGRAM_LEN", "3"))
 
     __slots__ = (
         "_history",
@@ -44,6 +35,7 @@ class RepetitionGuard:
     )
 
     def __init__(self) -> None:
+        validate_buffer_size(self.BUFFER_SIZE)
         self._history = [0] * self.BUFFER_SIZE
         self._index = 0
         self._max_history_index = 0
