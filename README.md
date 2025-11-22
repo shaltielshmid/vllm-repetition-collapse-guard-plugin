@@ -36,8 +36,6 @@ Lower values catch single-token loops faster.
 
 - **`MIN_GRAM_REP`** (default: `5`): Minimum number of n-gram repetitions required to trigger a stop (works together with `MAX_TOKEN_REP`, the higher of the two for each n). 
 
-- **`MAX_NGRAM_LEN`** (default: `12`): Maximum n-gram length to check for repetition. 
-
-- **`MIN_NGRAM_LEN`** (default: `3`): Minimum n-gram length to check for repetition. 
+- **`MAX_PERIOD_CHECK`** (default: `256`): Maximum distance to check for repeating patterns. Controls how far back the algorithm looks for pattern matches. Higher values detect longer-range repetitions but may impact performance.
 
 Enjoy!

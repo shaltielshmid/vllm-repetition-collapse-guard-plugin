@@ -24,18 +24,19 @@ class RepetitionGuard:
     MASK = BUFFER_SIZE - 1
     MAX_TOKEN_REP = int(os.getenv("MAX_TOKEN_REP", "32"))
     MIN_GRAM_REP = int(os.getenv("MIN_GRAM_REP", "5"))
-    MAX_NGRAM_LEN = int(os.getenv("MAX_NGRAM_LEN", "12"))
-    MIN_NGRAM_LEN = int(os.getenv("MIN_NGRAM_LEN", "3"))
-
+    MAX_PERIOD_CHECK = int(os.getenv("MAX_PERIOD_CHECK", "256"))
+    
     __slots__ = (
         "_history",
         "_index",
         "_max_history_index",
         "_consecutive_token_run_count",
+        "_match_lens"
     )
 
     def __init__(self) -> None:
-        self._history = [0] * self.BUFFER_SIZE
+        self._history = [-1] * self.BUFFER_SIZE
+        self._match_lens = [0] * self.BUFFER_SIZE
         self._index = 0
         self._max_history_index = 0
         self._consecutive_token_run_count = 1
@@ -53,17 +54,17 @@ class RepetitionGuard:
         # retrieve the values for faster retrieval(?)
         hist = self._history
         mask = self.MASK
+        match_lens = self._match_lens
 
         idx = self._index
         hist[idx] = token_id
-        idx = (idx + 1) & mask # cheap trick, since mask is 2^N-1, it's like running modulo but faster
-        self._index = idx
+        self._index = (idx + 1) & mask # cheap trick, since mask is 2^N-1, it's like running modulo but faster
 
         if self._max_history_index < self.BUFFER_SIZE:
             self._max_history_index += 1
 
         # Single‑token run: previous token equals current token
-        if self._max_history_index > 1 and hist[(idx - 2) & mask] == token_id:
+        if self._max_history_index > 1 and hist[(idx - 1) & mask] == token_id:
             self._consecutive_token_run_count += 1
             if self._consecutive_token_run_count >= self.MAX_TOKEN_REP:
                 return True
@@ -74,9 +75,21 @@ class RepetitionGuard:
         if self._max_history_index < self.MAX_TOKEN_REP:
             return False
 
-        max_rep = self.MAX_TOKEN_REP
-        min_rep = self.MIN_GRAM_REP
+        # We check "Is the current token a continuation of a pattern from 'dist' ago?"
+        # We check distances from 2 up to MAX_PERIOD_CHECK.
+        limit = min(self._max_history_index, self.MAX_PERIOD_CHECK)
 
+        for dist in range(2, limit):
+            if token_id == hist[(idx - dist) & mask]:
+                match_lens[dist] += 1
+                # match_lens[dist] now holds the ngram length that has repeated - but if it's one ngram repeated a few times, it'll
+                # just be treated as a very long ngram. 
+                current_run = match_lens[dist]
+                if current_run > self.MAX_TOKEN_REP and current_run // dist >= self.MIN_GRAM_REP:
+                    return True
+            else:
+                match_lens[dist] = 0
+        
         # N‑gram repetition detection
         for p in range(self.MIN_NGRAM_LEN, self.MAX_NGRAM_LEN + 1):
             ok = True
