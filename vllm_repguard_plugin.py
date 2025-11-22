@@ -104,7 +104,7 @@ _REPGUARD_ENABLED = os.environ.get("VLLM_REPGUARD_ENABLE", "1") not in ("0", "fa
 
 
 def _resolve_finish_reason_stop() -> Any | None:
-    """Best‑effort lookup for FinishReason.STOP from vLLM V1 or V0."""
+    """Best‑effort lookup for FinishReason.ABORT from vLLM V1 or V0."""
     global _FINISH_REASON_STOP
     if _FINISH_REASON_STOP is not None:
         return _FINISH_REASON_STOP
@@ -113,8 +113,8 @@ def _resolve_finish_reason_stop() -> Any | None:
     try:
         import vllm.v1.engine as v1_engine  # type: ignore[attr-defined]
         FR = getattr(v1_engine, "FinishReason", None)
-        if FR is not None and hasattr(FR, "STOP"):
-            _FINISH_REASON_STOP = FR.STOP
+        if FR is not None and hasattr(FR, "ABORT"):
+            _FINISH_REASON_STOP = FR.ABORT
             return _FINISH_REASON_STOP
     except Exception:
         pass
@@ -124,13 +124,13 @@ def _resolve_finish_reason_stop() -> Any | None:
         import vllm.engine as engine_mod  # type: ignore[attr-defined]
         FR = getattr(engine_mod, "FinishReason", None)
         if FR is not None and hasattr(FR, "STOP"):
-            _FINISH_REASON_STOP = FR.STOP
+            _FINISH_REASON_STOP = FR.ABORT
             return _FINISH_REASON_STOP
     except Exception:
         pass
 
     log.warning(
-        "vllm_repguard_plugin: could not resolve FinishReason.STOP; "
+        "vllm_repguard_plugin: could not resolve FinishReason.ABORT; "
         "will still abort requests, but finish_reason may be generic."
     )
     _FINISH_REASON_STOP = None
@@ -255,4 +255,5 @@ def register_repguard() -> None:
 
     log.info("vllm_repguard_plugin: initialization complete")
     log.info("=" * 60)
+
 
