@@ -35,7 +35,6 @@ class RepetitionGuard:
     )
 
     def __init__(self) -> None:
-        validate_buffer_size(self.BUFFER_SIZE)
         self._history = [0] * self.BUFFER_SIZE
         self._index = 0
         self._max_history_index = 0
@@ -256,3 +255,4 @@ def register_repguard() -> None:
 
     log.info("vllm_repguard_plugin: initialization complete")
     log.info("=" * 60)
+
