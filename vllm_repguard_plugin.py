@@ -85,26 +85,10 @@ class RepetitionGuard:
                 # match_lens[dist] now holds the ngram length that has repeated - but if it's one ngram repeated a few times, it'll
                 # just be treated as a very long ngram. 
                 current_run = match_lens[dist]
-                if current_run > self.MAX_TOKEN_REP and current_run // dist >= self.MIN_GRAM_REP:
+                if current_run > self.MAX_TOKEN_REP and current_run >= dist * self.MIN_GRAM_REP:
                     return True
             else:
                 match_lens[dist] = 0
-        
-        # N‑gram repetition detection
-        for p in range(self.MIN_NGRAM_LEN, self.MAX_NGRAM_LEN + 1):
-            ok = True
-            reps = max(max_rep // p, min_rep)
-            for k in range(1, p + 1):
-                x = hist[(idx - k) & mask]
-                for j in range(1, reps):
-                    if x != hist[(idx - k - j * p) & mask]:
-                        ok = False
-                        break
-                if not ok:
-                    break
-            if ok:
-                return True
-
         return False
 
 
