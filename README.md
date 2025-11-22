@@ -1,6 +1,6 @@
 # vLLM Repetition Collapse Guard Plugin
 
-VLLM-PLugin that Detects and stops LLM generation when it gets stuck in repetition collapse (short repeating loops of tokens or n-grams until max length).
+vLLM-PLugin that detects and stops LLM generation when it gets stuck in repetition collapse (short repeating loops of tokens or n-grams until max length).
 
 ## Installation
 
